@@ -1,0 +1,22 @@
+# Compiled Go binaries
+bin/
+*.exe
+*.test
+*.prof
+
+# MacOS system files
+.DS_Store
+
+# Local temporary/scratch folders
+tmp/
+scratch/
+rezipped.pgtx
+
+# Testing/Helper temporary scripts
+scratch_test_import.py
+test_perfect_zip.py
+
+# Local configuration files
+.env
+.env.local
+.env.*.local

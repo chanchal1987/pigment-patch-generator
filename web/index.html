@@ -1,0 +1,1638 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-[#090b0e] text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arturia Pigments Patch Generator | AI Sound Deconstructor</title>
+  <!-- Google Fonts: Outfit (Sleek UI) and JetBrains Mono (Synth display) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Outfit', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    /* Pigments 7 Colors & Neon Glows */
+    .glow-cyan {
+      box-shadow: 0 0 15px rgba(34, 211, 238, 0.25);
+      border-color: rgba(34, 211, 238, 0.4);
+    }
+    .glow-orange {
+      box-shadow: 0 0 15px rgba(251, 146, 60, 0.25);
+      border-color: rgba(251, 146, 60, 0.4);
+    }
+    .glow-green {
+      box-shadow: 0 0 15px rgba(74, 222, 128, 0.25);
+      border-color: rgba(74, 222, 128, 0.4);
+    }
+    .glow-purple {
+      box-shadow: 0 0 15px rgba(192, 132, 252, 0.25);
+      border-color: rgba(192, 132, 252, 0.4);
+    }
+
+    /* Synth Interface Panels */
+    .synth-panel {
+      background: linear-gradient(135deg, #13171e 0%, #0e1116 100%);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.7);
+    }
+
+    .synth-subpanel {
+      background: #191e27;
+      border: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    /* Glowing drag & drop active border */
+    .drag-active {
+      border-color: #22d3ee !important;
+      box-shadow: 0 0 25px rgba(34, 211, 238, 0.2) !important;
+      background: rgba(34, 211, 238, 0.02) !important;
+    }
+
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090b0e;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    /* Rotary knob styling */
+    .knob-container {
+      touch-action: none;
+    }
+
+    /* Shimmer animation for loading state */
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .shimmer-bg {
+      background: linear-gradient(90deg, rgba(255,255,255,0.01) 25%, rgba(255,255,255,0.04) 50%, rgba(255,255,255,0.01) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite linear;
+    }
+
+    /* Gemini Sparkles and Loading Flow */
+    @keyframes gemini-flow {
+      0% { background-position: 0% center; }
+      100% { background-position: -200% center; }
+    }
+    .gemini-gradient {
+      background: linear-gradient(90deg, #22d3ee, #3b82f6, #a855f7, #ec4899, #fb923c, #22d3ee);
+      background-size: 200% auto;
+      animation: gemini-flow 3s linear infinite;
+    }
+    @keyframes gemini-pulse {
+      0%, 100% { transform: scale(0.8) rotate(0deg); opacity: 0.6; filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.4)); }
+      50% { transform: scale(1.1) rotate(15deg); opacity: 1; filter: drop-shadow(0 0 15px rgba(34, 211, 238, 0.8)); }
+    }
+    @keyframes gemini-pulse-delayed {
+      0%, 100% { transform: scale(1.1) rotate(-10deg); opacity: 0.9; filter: drop-shadow(0 0 12px rgba(168, 85, 247, 0.6)); }
+      50% { transform: scale(0.8) rotate(5deg); opacity: 0.5; filter: drop-shadow(0 0 4px rgba(236, 72, 153, 0.3)); }
+    }
+    @keyframes gemini-pulse-mini {
+      0%, 100% { transform: scale(0.9) rotate(5deg); opacity: 0.7; filter: drop-shadow(0 0 8px rgba(251, 146, 60, 0.4)); }
+      50% { transform: scale(1.2) rotate(-15deg); opacity: 1; filter: drop-shadow(0 0 16px rgba(251, 191, 36, 0.7)); }
+    }
+    .gemini-sparkle {
+      animation: gemini-pulse 3.5s ease-in-out infinite;
+      transform-origin: center;
+    }
+    .gemini-sparkle-delayed {
+      animation: gemini-pulse-delayed 2.8s ease-in-out infinite;
+      transform-origin: center;
+    }
+    .gemini-sparkle-mini {
+      animation: gemini-pulse-mini 2.2s ease-in-out infinite;
+      transform-origin: center;
+    }
+
+    /* Animated Synth Cards */
+    .synth-card {
+      flex: 0 0 0%;
+      min-width: 0;
+      opacity: 0;
+      transform: scale(0.85);
+      pointer-events: none;
+      overflow: hidden;
+      padding: 0 !important;
+      border-width: 0 !important;
+      margin: 0 !important;
+      transition: flex 0.6s cubic-bezier(0.25, 1, 0.5, 1),
+                  opacity 0.5s ease,
+                  transform 0.5s cubic-bezier(0.25, 1, 0.5, 1),
+                  padding 0.6s cubic-bezier(0.25, 1, 0.5, 1),
+                  border-width 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+    
+    .synth-card.active {
+      flex: 1 1 280px;
+      min-width: 250px;
+      opacity: 1;
+      transform: scale(1);
+      pointer-events: auto;
+      padding: 1rem !important; /* matches p-4 */
+      border: 1px solid rgba(255, 255, 255, 0.03) !important;
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col justify-between overflow-x-hidden select-none">
+
+  <!-- Background Gradients -->
+  <div class="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
+    <div class="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-cyan-950/10 blur-[150px]"></div>
+    <div class="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-purple-950/15 blur-[150px]"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="border-b border-white/5 py-3 px-6 bg-[#0c0e12]/80 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <img class="h-8 w-8 rounded-lg shadow-lg shadow-cyan-500/10 object-contain" src="https://support.arturia.com/hc/article_attachments/24277685755676" alt="Pigments 7 Icon">
+        <div>
+          <span class="text-base font-bold tracking-wider text-white font-mono uppercase">Pigments 7</span>
+          <span class="text-xs text-slate-500 ml-1 font-mono tracking-widest uppercase">Deconstructor</span>
+        </div>
+      </div>
+      <div class="flex items-center space-x-3">
+        <label class="text-[10px] font-bold text-slate-500 tracking-wider font-mono uppercase">AI Engine:</label>
+        <select id="model-select" class="text-xs bg-[#191e27] border border-white/5 text-slate-300 px-3 py-1.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-500 cursor-pointer font-mono hover:bg-[#202732] transition-colors duration-150">
+          <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
+          <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+          <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+          <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6 md:py-8 flex flex-col space-y-6 justify-center">
+
+    <!-- Interface Panel Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+      
+      <!-- Left Column: Audio Sampler (Upload Box) & Status logs -->
+      <div class="lg:col-span-4 flex flex-col space-y-6">
+        
+        <!-- Audio Sampler Upload Panel -->
+        <div class="synth-panel rounded-2xl p-6 flex-1 flex flex-col justify-between">
+          <div class="space-y-4">
+            <div class="flex justify-between items-center border-b border-white/5 pb-2">
+              <span class="text-xs font-bold text-slate-400 tracking-widest font-mono uppercase">Sample Engine</span>
+              <span class="text-[10px] text-cyan-400 font-mono tracking-wider">INPUT</span>
+            </div>
+            
+            <div id="dropzone" class="synth-subpanel rounded-xl border border-dashed border-white/10 p-8 text-center transition-all duration-300 hover:border-white/20 hover:bg-[#1a212c]/40 cursor-pointer relative group flex flex-col justify-center items-center space-y-4 h-64">
+              <input type="file" id="file-input" accept=".wav,.mp3" class="hidden">
+              
+              <div class="space-y-4" id="upload-prompt">
+                <div class="h-14 w-14 mx-auto rounded-full bg-white/5 border border-white/5 flex items-center justify-center transition-all duration-200 group-hover:scale-105 group-hover:bg-cyan-500/5 group-hover:border-cyan-500/20">
+                  <svg class="h-6 w-6 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                </div>
+                <div class="space-y-1">
+                  <p class="text-sm font-semibold text-slate-200">Load Audio Sample</p>
+                  <p class="text-[11px] text-slate-500 font-mono">WAV / MP3 up to 10MB</p>
+                </div>
+              </div>
+
+              <!-- File Info Container -->
+              <div class="hidden space-y-4 w-full" id="file-info-container">
+                <div class="h-14 w-14 mx-auto rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
+                  <svg class="h-6 w-6 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
+                  </svg>
+                </div>
+                <div class="space-y-1">
+                  <p class="text-sm font-semibold text-slate-200 truncate px-4 font-mono" id="filename-text">sample.wav</p>
+                  <p class="text-[10px] text-slate-500 font-mono" id="filesize-text">2.4 MB</p>
+                </div>
+                <div class="flex justify-center space-x-2 pt-2">
+                  <button type="button" id="btn-cancel-file" class="px-3.5 py-1.5 text-xs font-semibold rounded bg-white/5 border border-white/5 hover:bg-white/10 text-slate-400 transition-colors duration-150 font-mono uppercase tracking-wider">
+                    Eject
+                  </button>
+                  <button type="button" id="btn-analyze" class="px-4 py-1.5 text-xs font-semibold rounded bg-cyan-600 hover:bg-cyan-500 text-white shadow-lg shadow-cyan-600/10 transition-all duration-150 font-mono uppercase tracking-wider">
+                    Analyze
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Loading State Card -->
+          <div id="loader-card" class="hidden synth-subpanel rounded-xl p-5 border border-cyan-500/10 mt-4">
+            <div class="space-y-4">
+              <!-- Gemini Sparkles Animation -->
+              <div class="flex items-center justify-center space-x-6 py-2">
+                <!-- Large Sparkle (Cyan/Blue) -->
+                <svg class="h-10 w-10 gemini-sparkle" viewBox="0 0 48 48">
+                  <defs>
+                    <linearGradient id="gemini-grad-1" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#22d3ee" />
+                      <stop offset="100%" stop-color="#3b82f6" />
+                    </linearGradient>
+                  </defs>
+                  <path d="M24 4C24 15 15 24 4 24C15 24 24 33 24 44C24 33 33 24 44 24C33 24 24 15 24 4Z" fill="url(#gemini-grad-1)" />
+                </svg>
+                <!-- Medium Sparkle (Purple/Pink) -->
+                <svg class="h-7 w-7 gemini-sparkle-delayed" viewBox="0 0 48 48">
+                  <defs>
+                    <linearGradient id="gemini-grad-2" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#a855f7" />
+                      <stop offset="100%" stop-color="#ec4899" />
+                    </linearGradient>
+                  </defs>
+                  <path d="M24 4C24 15 15 24 4 24C15 24 24 33 24 44C24 33 33 24 44 24C33 24 24 15 24 4Z" fill="url(#gemini-grad-2)" />
+                </svg>
+                <!-- Small Sparkle (Amber/Orange) -->
+                <svg class="h-5 w-5 gemini-sparkle-mini" viewBox="0 0 48 48">
+                  <defs>
+                    <linearGradient id="gemini-grad-3" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#fb923c" />
+                      <stop offset="100%" stop-color="#fbbf24" />
+                    </linearGradient>
+                  </defs>
+                  <path d="M24 4C24 15 15 24 4 24C15 24 24 33 24 44C24 33 33 24 44 24C33 24 24 15 24 4Z" fill="url(#gemini-grad-3)" />
+                </svg>
+              </div>
+
+              <div class="space-y-2">
+                <div class="flex justify-between items-center text-[10px] font-mono">
+                  <span class="text-cyan-400 font-bold uppercase tracking-wider">Deconstructing...</span>
+                  <span class="text-slate-400" id="loader-percent">0%</span>
+                </div>
+                <div class="w-full bg-[#0d1013] rounded-full h-1.5 overflow-hidden">
+                  <div id="loader-bar" class="gemini-gradient h-1.5 rounded-full w-0 transition-all duration-[600ms] ease-out"></div>
+                </div>
+              </div>
+              <p class="text-[10px] text-slate-500 text-center italic font-mono leading-tight">"Extracting waveforms and filter properties..."</p>
+            </div>
+          </div>
+
+          <!-- Status Error Card -->
+          <div id="error-card" class="hidden synth-subpanel rounded-xl p-4 border border-red-500/20 bg-red-950/5 mt-4">
+            <div class="flex space-x-3 items-start">
+              <div class="h-4.5 w-4.5 text-red-400 mt-0.5">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div class="space-y-0.5">
+                <h4 class="text-xs font-bold text-slate-200 font-mono uppercase tracking-wider">Analysis Failed</h4>
+                <p class="text-[11px] text-slate-500 font-mono leading-relaxed" id="error-message">Format unsupported</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Visual Deck (Waveforms, Dials, Knobs & Envelopes) -->
+      <div class="lg:col-span-8 flex flex-col space-y-6">
+        
+        <!-- Empty State Deck -->
+        <div id="empty-results-card" class="synth-panel rounded-2xl p-12 text-center flex flex-col items-center justify-center space-y-4 h-full min-h-[450px]">
+          <div class="h-12 w-12 rounded-full bg-white/5 border border-white/5 flex items-center justify-center">
+            <svg class="h-6 w-6 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            </svg>
+          </div>
+          <div class="space-y-1">
+            <h3 class="text-sm font-bold text-slate-300 font-mono uppercase tracking-wider">Awaiting Audio Input</h3>
+            <p class="text-xs text-slate-500 max-w-sm font-mono leading-relaxed">Feed a sound sample into the sampler engine on the left to reconstruct the patch parameters and synthesize the Pigments visual interface.</p>
+          </div>
+        </div>
+
+        <!-- Synth Active Deck -->
+        <div id="results-card" class="hidden synth-panel rounded-2xl overflow-hidden flex flex-col justify-between h-full">
+          
+          <!-- Deck Top Nav -->
+          <div class="border-b border-white/5 bg-[#0c0e12]/60 px-6 py-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h3 class="text-xs font-bold text-slate-300 flex items-center space-x-2 font-mono uppercase tracking-widest">
+                <span class="inline-block w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                <span>Synth Active</span>
+              </h3>
+              <p class="text-[11px] text-slate-500 font-mono mt-0.5" id="val-patch-name">Patch: Init Preset</p>
+            </div>
+            <div class="flex space-x-1.5 bg-[#090b0e] p-1 rounded-lg border border-white/5">
+              <button id="tab-btn-params" class="px-3.5 py-1 text-xs font-bold rounded bg-cyan-600 text-white font-mono uppercase tracking-wider transition-colors duration-150">
+                Synth Panel
+              </button>
+              <button id="tab-btn-md" class="px-3.5 py-1 text-xs font-bold rounded text-slate-500 hover:text-slate-300 font-mono uppercase tracking-wider transition-colors duration-150">
+                Guide (.md)
+              </button>
+            </div>
+          </div>
+
+          <!-- Deck Body -->
+          <div class="p-6 flex-1 flex flex-col justify-between space-y-6">
+            
+            <!-- Tab 1: Param Deck -->
+            <div id="tab-content-params" class="flex-1 flex flex-col justify-between space-y-6">
+              
+              <!-- Top Row: Engines, Filters, Envelopes (Dynamic Animated Flexbox) -->
+              <div id="synth-modules-container" class="flex flex-col md:flex-row flex-wrap gap-5 w-full items-stretch">
+                
+                <!-- Engine 1: Wavetable (Always Active) -->
+                <div id="engine1-box" class="synth-subpanel rounded-xl flex flex-col justify-between space-y-3 relative overflow-hidden synth-card active">
+                  <div class="flex justify-between items-center border-b border-white/5 pb-1">
+                    <span class="text-[10px] font-bold text-slate-400 tracking-wider font-mono uppercase">Engine 1 (Wavetable)</span>
+                    <span class="text-[10px] text-cyan-400 font-mono font-semibold" id="val-osc-waveform">Sine</span>
+                  </div>
+                  
+                  <!-- 3D Wavetable Canvas Plotter -->
+                  <div class="relative h-28 w-full bg-[#0d1013] rounded-lg border border-white/5 flex items-center justify-center overflow-hidden">
+                    <canvas id="wavetable-canvas" class="w-full h-full opacity-80"></canvas>
+                  </div>
+                  
+                  <div class="flex justify-between text-[11px] font-mono text-slate-500">
+                    <span>Waveform Pos:</span>
+                    <span class="text-cyan-400" id="val-wvt-pos">0.00%</span>
+                  </div>
+                </div>
+
+                <!-- Engine 2 Box (Dynamic) -->
+                <div id="engine2-box" class="synth-subpanel rounded-xl flex flex-col justify-between space-y-3 relative overflow-hidden synth-card">
+                  <div class="flex justify-between items-center border-b border-white/5 pb-1">
+                    <span class="text-[10px] font-bold text-slate-400 tracking-wider font-mono uppercase">Engine 2</span>
+                    <span class="text-[10px] text-purple-400 font-mono font-semibold" id="val-osc2-waveform">Sine</span>
+                  </div>
+                  
+                  <!-- 3D Wavetable Canvas Plotter for Engine 2 -->
+                  <div class="relative h-28 w-full bg-[#0d1013] rounded-lg border border-white/5 flex items-center justify-center overflow-hidden">
+                    <canvas id="wavetable2-canvas" class="w-full h-full opacity-80"></canvas>
+                  </div>
+                  
+                  <div class="flex justify-between text-[11px] font-mono text-slate-500">
+                    <span>Volume:</span>
+                    <span class="text-purple-400" id="val-osc2-volume">0.00%</span>
+                  </div>
+                </div>
+
+                <!-- Filter 1: Multimode (Always Active) -->
+                <div id="filter1-box" class="synth-subpanel rounded-xl flex flex-col justify-between space-y-3 relative overflow-hidden synth-card active">
+                  <div class="flex justify-between items-center border-b border-white/5 pb-1">
+                    <span class="text-[10px] font-bold text-slate-400 tracking-wider font-mono uppercase">Filter 1 (Multimode)</span>
+                    <span class="text-[10px] text-orange-400 font-mono font-semibold">Lowpass</span>
+                  </div>
+                  
+                  <!-- Filter Graph Canvas Plotter -->
+                  <div class="relative h-28 w-full bg-[#0d1013] rounded-lg border border-white/5 flex items-center justify-center overflow-hidden">
+                    <canvas id="filter-canvas" class="w-full h-full opacity-80"></canvas>
+                  </div>
+                  
+                  <div class="grid grid-cols-2 gap-2 text-[10px] font-mono text-slate-500">
+                    <div class="flex justify-between">
+                      <span>Cutoff:</span>
+                      <span class="text-orange-400" id="val-filter-cutoff">0.654</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span>Res:</span>
+                      <span class="text-orange-400" id="val-filter-resonance">0.210</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Filter 2 Box (Dynamic) -->
+                <div id="filter2-box" class="synth-subpanel rounded-xl flex flex-col justify-between space-y-3 relative overflow-hidden synth-card">
+                  <div class="flex justify-between items-center border-b border-white/5 pb-1">
+                    <span class="text-[10px] font-bold text-slate-400 tracking-wider font-mono uppercase">Filter 2</span>
+                    <span class="text-[10px] text-pink-400 font-mono font-semibold" id="val-filter2-type">Lowpass</span>
+                  </div>
+                  
+                  <!-- Filter 2 Graph Canvas Plotter -->
+                  <div class="relative h-28 w-full bg-[#0d1013] rounded-lg border border-white/5 flex items-center justify-center overflow-hidden">
+                    <canvas id="filter2-canvas" class="w-full h-full opacity-80"></canvas>
+                  </div>
+                  
+                  <div class="grid grid-cols-2 gap-2 text-[10px] font-mono text-slate-500">
+                    <div class="flex justify-between">
+                      <span>Cutoff:</span>
+                      <span class="text-pink-400" id="val-filter2-cutoff">0.000</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span>Res:</span>
+                      <span class="text-pink-400" id="val-filter2-resonance">0.000</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Envelope 1: ADSR (Always Active) -->
+                <div id="envelope1-box" class="synth-subpanel rounded-xl flex flex-col justify-between space-y-3 relative overflow-hidden synth-card active">
+                  <div class="flex justify-between items-center border-b border-white/5 pb-1">
+                    <span class="text-[10px] font-bold text-slate-400 tracking-wider font-mono uppercase">Envelope 1 (Amplitude)</span>
+                    <span class="text-[10px] text-green-400 font-mono font-semibold">ADSR</span>
+                  </div>
+                  
+                  <!-- Envelope Shape Canvas Plotter -->
+                  <div class="relative h-28 w-full bg-[#0d1013] rounded-lg border border-white/5 flex items-center justify-center overflow-hidden">
+                    <canvas id="envelope-canvas" class="w-full h-full opacity-80"></canvas>
+                  </div>
+                  
+                  <div class="grid grid-cols-4 gap-1 text-[9px] font-mono text-center text-slate-500">
+                    <div>
+                      <div class="text-green-400" id="val-env-attack">0.00</div>
+                      <div class="scale-90 font-semibold">A</div>
+                    </div>
+                    <div>
+                      <div class="text-green-400" id="val-env-decay">0.32</div>
+                      <div class="scale-90 font-semibold">D</div>
+                    </div>
+                    <div>
+                      <div class="text-green-400" id="val-env-sustain">0.70</div>
+                      <div class="scale-90 font-semibold">S</div>
+                    </div>
+                    <div>
+                      <div class="text-green-400" id="val-env-release">0.15</div>
+                      <div class="scale-90 font-semibold">R</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Utility Engine Box (Dynamic) -->
+                <div id="utility-box" class="synth-subpanel rounded-xl flex flex-col justify-between space-y-3 relative overflow-hidden synth-card">
+                  <div class="flex justify-between items-center border-b border-white/5 pb-1">
+                    <span class="text-[10px] font-bold text-slate-400 tracking-wider font-mono uppercase">Utility Engine</span>
+                    <span class="text-[10px] text-amber-400 font-mono font-semibold">Sub + Noise</span>
+                  </div>
+                  
+                  <!-- Utility Noise Canvas Visualizer -->
+                  <div class="relative h-28 w-full bg-[#0d1013] rounded-lg border border-white/5 flex items-center justify-center overflow-hidden">
+                    <canvas id="utility-canvas" class="w-full h-full opacity-70"></canvas>
+                  </div>
+                  
+                  <div class="grid grid-cols-3 gap-1 text-[9px] font-mono text-slate-500 text-center">
+                    <div>
+                      <span class="text-amber-400 block" id="val-utility-subvol">0%</span>
+                      <span class="text-[8px] text-slate-600 block uppercase">Sub</span>
+                    </div>
+                    <div>
+                      <span class="text-amber-400 block" id="val-utility-noise1">0%</span>
+                      <span class="text-[8px] text-slate-600 block uppercase">Noise 1</span>
+                    </div>
+                    <div>
+                      <span class="text-amber-400 block" id="val-utility-noise2">0%</span>
+                      <span class="text-[8px] text-slate-600 block uppercase">Noise 2</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Bottom Row: 4 Circular Macro Knobs -->
+              <div class="synth-subpanel rounded-xl p-5 space-y-4">
+                <div class="flex justify-between items-center border-b border-white/5 pb-1">
+                  <span class="text-[10px] font-bold text-slate-400 tracking-wider font-mono uppercase">Arturia 4 Macros</span>
+                  <span class="text-[10px] text-purple-400 font-mono">Modulation Controls</span>
+                </div>
+                
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 items-start justify-items-center">
+                  
+                  <!-- Macro 1: Bright -->
+                  <div class="flex flex-col items-center space-y-2 text-center w-full max-w-[140px]">
+                    <span class="text-[10px] font-mono font-bold text-cyan-400 uppercase tracking-widest">1. Brightness</span>
+                    <div class="knob-container cursor-ns-resize" id="macro-knob-1">
+                      <svg class="h-20 w-20" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="38" fill="none" stroke="#13171e" stroke-width="8"></circle>
+                        <circle id="macro-arc-1" cx="50" cy="50" r="38" fill="none" stroke="#06b6d4" stroke-width="8" stroke-dasharray="238.76" stroke-dashoffset="119.38" stroke-linecap="round" transform="rotate(135 50 50)"></circle>
+                        <circle cx="50" cy="50" r="28" fill="#1b2029" stroke="#2a3341" stroke-width="2" class="filter drop-shadow-md"></circle>
+                        <circle id="macro-indicator-1" cx="50" cy="32" r="3.5" fill="#06b6d4" transform="rotate(0 50 50)"></circle>
+                      </svg>
+                    </div>
+                    <div class="space-y-0.5">
+                      <div class="text-[11px] font-mono font-semibold text-slate-200" id="macro-val-1">50.0%</div>
+                      <div class="text-[9px] font-mono text-slate-500 leading-tight truncate w-24 hover:w-auto" id="macro-route-1">Unassigned</div>
+                    </div>
+                  </div>
+
+                  <!-- Macro 2: Timbre -->
+                  <div class="flex flex-col items-center space-y-2 text-center w-full max-w-[140px]">
+                    <span class="text-[10px] font-mono font-bold text-orange-400 uppercase tracking-widest">2. Timbre</span>
+                    <div class="knob-container cursor-ns-resize" id="macro-knob-2">
+                      <svg class="h-20 w-20" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="38" fill="none" stroke="#13171e" stroke-width="8"></circle>
+                        <circle id="macro-arc-2" cx="50" cy="50" r="38" fill="none" stroke="#fb923c" stroke-width="8" stroke-dasharray="238.76" stroke-dashoffset="119.38" stroke-linecap="round" transform="rotate(135 50 50)"></circle>
+                        <circle cx="50" cy="50" r="28" fill="#1b2029" stroke="#2a3341" stroke-width="2" class="filter drop-shadow-md"></circle>
+                        <circle id="macro-indicator-2" cx="50" cy="32" r="3.5" fill="#fb923c" transform="rotate(0 50 50)"></circle>
+                      </svg>
+                    </div>
+                    <div class="space-y-0.5">
+                      <div class="text-[11px] font-mono font-semibold text-slate-200" id="macro-val-2">50.0%</div>
+                      <div class="text-[9px] font-mono text-slate-500 leading-tight truncate w-24 hover:w-auto" id="macro-route-2">Unassigned</div>
+                    </div>
+                  </div>
+
+                  <!-- Macro 3: Time -->
+                  <div class="flex flex-col items-center space-y-2 text-center w-full max-w-[140px]">
+                    <span class="text-[10px] font-mono font-bold text-green-400 uppercase tracking-widest">3. Time</span>
+                    <div class="knob-container cursor-ns-resize" id="macro-knob-3">
+                      <svg class="h-20 w-20" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="38" fill="none" stroke="#13171e" stroke-width="8"></circle>
+                        <circle id="macro-arc-3" cx="50" cy="50" r="38" fill="none" stroke="#4ade80" stroke-width="8" stroke-dasharray="238.76" stroke-dashoffset="119.38" stroke-linecap="round" transform="rotate(135 50 50)"></circle>
+                        <circle cx="50" cy="50" r="28" fill="#1b2029" stroke="#2a3341" stroke-width="2" class="filter drop-shadow-md"></circle>
+                        <circle id="macro-indicator-3" cx="50" cy="32" r="3.5" fill="#4ade80" transform="rotate(0 50 50)"></circle>
+                      </svg>
+                    </div>
+                    <div class="space-y-0.5">
+                      <div class="text-[11px] font-mono font-semibold text-slate-200" id="macro-val-3">50.0%</div>
+                      <div class="text-[9px] font-mono text-slate-500 leading-tight truncate w-24 hover:w-auto" id="macro-route-3">Unassigned</div>
+                    </div>
+                  </div>
+
+                  <!-- Macro 4: Movement -->
+                  <div class="flex flex-col items-center space-y-2 text-center w-full max-w-[140px]">
+                    <span class="text-[10px] font-mono font-bold text-purple-400 uppercase tracking-widest">4. Movement</span>
+                    <div class="knob-container cursor-ns-resize" id="macro-knob-4">
+                      <svg class="h-20 w-20" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="38" fill="none" stroke="#13171e" stroke-width="8"></circle>
+                        <circle id="macro-arc-4" cx="50" cy="50" r="38" fill="none" stroke="#c084fc" stroke-width="8" stroke-dasharray="238.76" stroke-dashoffset="119.38" stroke-linecap="round" transform="rotate(135 50 50)"></circle>
+                        <circle cx="50" cy="50" r="28" fill="#1b2029" stroke="#2a3341" stroke-width="2" class="filter drop-shadow-md"></circle>
+                        <circle id="macro-indicator-4" cx="50" cy="32" r="3.5" fill="#c084fc" transform="rotate(0 50 50)"></circle>
+                      </svg>
+                    </div>
+                    <div class="space-y-0.5">
+                      <div class="text-[11px] font-mono font-semibold text-slate-200" id="macro-val-4">50.0%</div>
+                      <div class="text-[9px] font-mono text-slate-500 leading-tight truncate w-24 hover:w-auto" id="macro-route-4">Unassigned</div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              <!-- Parameter Tables (Full Width Grid Toggle) -->
+              <div id="additional-params-section" class="hidden synth-subpanel rounded-xl p-4 space-y-3">
+                <div class="flex justify-between items-center border-b border-white/5 pb-1">
+                  <span class="text-[10px] font-bold text-slate-400 tracking-wider font-mono uppercase">Advanced Routing & Parameters</span>
+                  <span class="text-[10px] text-cyan-400 font-mono">Modulation Matrix</span>
+                </div>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr class="border-b border-white/10 text-slate-500 font-mono uppercase text-[9px] tracking-wider">
+                        <th class="pb-2 font-bold">Parameter ID</th>
+                        <th class="pb-2 font-bold text-right">Value</th>
+                        <th class="pb-2 font-bold text-right">Percentage</th>
+                        <th class="pb-2 pl-4 font-bold">Rationale / Description</th>
+                      </tr>
+                    </thead>
+                    <tbody id="additional-params-tbody" class="divide-y divide-white/5 text-slate-300 font-mono text-[11px]">
+                      <!-- Dynamically populated rows -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Tab 2: Manual Guide Tab Content -->
+            <div id="tab-content-md" class="hidden space-y-4 flex-1 flex flex-col justify-between">
+              <div class="flex justify-between items-center border-b border-white/5 pb-2">
+                <span class="text-xs text-slate-400 font-mono">Preset Rebuild Document (.md)</span>
+                <button id="btn-copy-md" class="px-3 py-1.5 text-xs rounded bg-white/5 border border-white/5 hover:bg-white/10 text-slate-300 font-mono uppercase tracking-wider flex items-center space-x-1.5 active:scale-95 transition-all duration-150">
+                  <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m-5 4h5m-5 4h5m-5 4h5" />
+                  </svg>
+                  <span id="copy-text">Copy</span>
+                </button>
+              </div>
+              <pre class="bg-[#0d1013] border border-white/5 rounded-xl p-4 overflow-y-auto text-xs font-mono text-slate-300 max-h-[350px] whitespace-pre-wrap leading-relaxed flex-1 select-text" id="markdown-pre"># Arturia Pigments Manual Guide...</pre>
+            </div>
+
+            <!-- Downloader Actions -->
+            <div class="border-t border-white/5 pt-4 flex flex-col sm:flex-row gap-3">
+              <a href="#" id="btn-download-pgtx" class="flex-1 px-5 py-2.5 text-center text-xs font-bold rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white shadow-lg shadow-cyan-600/10 flex items-center justify-center space-x-2 transition-all duration-150 font-mono uppercase tracking-wider">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                <span>Download .pgtx Preset</span>
+              </a>
+              <a href="#" id="btn-download-md" class="flex-1 px-5 py-2.5 text-center text-xs font-bold rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 text-slate-300 flex items-center justify-center space-x-2 transition-all duration-150 font-mono uppercase tracking-wider">
+                <svg class="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span>Download Markdown Backup</span>
+              </a>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-white/5 py-4 text-center text-[10px] text-slate-700 bg-[#090b0e] font-mono tracking-widest uppercase">
+    <div class="max-w-7xl mx-auto px-4">
+      <p>Arturia Pigments AI Preset Generator &copy; 2026. Handcrafted using Go + Gemini.</p>
+    </div>
+  </footer>
+
+  <!-- Web Logic Script -->
+  <script>
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('file-input');
+    const uploadPrompt = document.getElementById('upload-prompt');
+    const fileInfoContainer = document.getElementById('file-info-container');
+    const filenameText = document.getElementById('filename-text');
+    const filesizeText = document.getElementById('filesize-text');
+    const btnCancelFile = document.getElementById('btn-cancel-file');
+    const btnAnalyze = document.getElementById('btn-analyze');
+    
+    const loaderCard = document.getElementById('loader-card');
+    const loaderBar = document.getElementById('loader-bar');
+    const loaderPercent = document.getElementById('loader-percent');
+    
+    const errorCard = document.getElementById('error-card');
+    const errorMessage = document.getElementById('error-message');
+    
+    const emptyResultsCard = document.getElementById('empty-results-card');
+    const resultsCard = document.getElementById('results-card');
+    
+    const tabBtnParams = document.getElementById('tab-btn-params');
+    const tabBtnMd = document.getElementById('tab-btn-md');
+    const tabContentParams = document.getElementById('tab-content-params');
+    const tabContentMd = document.getElementById('tab-content-md');
+    
+    const valOscWaveform = document.getElementById('val-osc-waveform');
+    const valFilterCutoff = document.getElementById('val-filter-cutoff');
+    const valFilterResonance = document.getElementById('val-filter-resonance');
+    
+    const valEnvAttack = document.getElementById('val-env-attack');
+    const valEnvDecay = document.getElementById('val-env-decay');
+    const valEnvSustain = document.getElementById('val-env-sustain');
+    const valEnvRelease = document.getElementById('val-env-release');
+    
+    const markdownPre = document.getElementById('markdown-pre');
+    const btnCopyMd = document.getElementById('btn-copy-md');
+    const copyText = document.getElementById('copy-text');
+    
+    const btnDownloadPgtx = document.getElementById('btn-download-pgtx');
+    const btnDownloadMd = document.getElementById('btn-download-md');
+
+    // Canvas visualizer selectors
+    const wvtCanvas = document.getElementById('wavetable-canvas');
+    const filterCanvas = document.getElementById('filter-canvas');
+    const envCanvas = document.getElementById('envelope-canvas');
+    const wvt2Canvas = document.getElementById('wavetable2-canvas');
+    const filter2Canvas = document.getElementById('filter2-canvas');
+    const utilityCanvas = document.getElementById('utility-canvas');
+
+    let selectedFile = null;
+    let analysisInProgress = false;
+
+    // Fetch available models dynamically on load
+    fetch('/api/models')
+      .then(response => response.json())
+      .then(models => {
+        const select = document.getElementById('model-select');
+        select.innerHTML = '';
+        models.forEach(model => {
+          const opt = document.createElement('option');
+          opt.value = model.name;
+          opt.textContent = model.display_name;
+          opt.className = "bg-slate-950 text-slate-300";
+          if (model.name === 'gemini-3.5-flash') {
+            opt.selected = true;
+          }
+          select.appendChild(opt);
+        });
+      })
+      .catch(err => {
+        console.error("Failed to load models dynamically:", err);
+      });
+
+    // Trigger file dialog
+    dropzone.addEventListener('click', (e) => {
+      if (analysisInProgress) return;
+      if (e.target.tagName !== 'BUTTON' && !e.target.closest('button')) {
+        fileInput.click();
+      }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        handleFileSelect(e.target.files[0]);
+      }
+    });
+
+    // Drag & Drop event handlers
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropzone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (analysisInProgress) return;
+        dropzone.classList.add('drag-active');
+      }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropzone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (analysisInProgress) return;
+        dropzone.classList.remove('drag-active');
+      }, false);
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+      if (analysisInProgress) return;
+      const dt = e.dataTransfer;
+      const files = dt.files;
+      if (files.length > 0) {
+        handleFileSelect(files[0]);
+      }
+    });
+
+    function handleFileSelect(file) {
+      const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+      if (ext !== '.wav' && ext !== '.mp3') {
+        showError("Invalid format: only WAV and MP3 files are supported.");
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        showError("File too large: maximum supported size is 10MB.");
+        return;
+      }
+      
+      selectedFile = file;
+      filenameText.textContent = file.name;
+      filesizeText.textContent = formatBytes(file.size);
+      
+      uploadPrompt.classList.add('hidden');
+      fileInfoContainer.classList.remove('hidden');
+      errorCard.classList.add('hidden');
+    }
+
+    btnCancelFile.addEventListener('click', () => {
+      resetFileInput();
+    });
+
+    function resetFileInput() {
+      selectedFile = null;
+      fileInput.value = '';
+      uploadPrompt.classList.remove('hidden');
+      fileInfoContainer.classList.add('hidden');
+    }
+
+    // Toggle Tabs
+    tabBtnParams.addEventListener('click', () => {
+      setTabActive('params');
+    });
+
+    tabBtnMd.addEventListener('click', () => {
+      setTabActive('md');
+    });
+
+    function setTabActive(tabName) {
+      if (tabName === 'params') {
+        tabBtnParams.className = "px-3.5 py-1 text-xs font-bold rounded bg-cyan-600 text-white font-mono uppercase tracking-wider transition-colors duration-150";
+        tabBtnMd.className = "px-3.5 py-1 text-xs font-bold rounded text-slate-500 hover:text-slate-300 font-mono uppercase tracking-wider transition-colors duration-150";
+        tabContentParams.classList.remove('hidden');
+        tabContentMd.classList.add('hidden');
+      } else {
+        tabBtnParams.className = "px-3.5 py-1 text-xs font-bold rounded text-slate-500 hover:text-slate-300 font-mono uppercase tracking-wider transition-colors duration-150";
+        tabBtnMd.className = "px-3.5 py-1 text-xs font-bold rounded bg-cyan-600 text-white font-mono uppercase tracking-wider transition-colors duration-150";
+        tabContentParams.classList.add('hidden');
+        tabContentMd.classList.remove('hidden');
+      }
+    }
+
+    // Copy Markdown to Clipboard
+    btnCopyMd.addEventListener('click', () => {
+      const text = markdownPre.textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        copyText.textContent = "Copied!";
+        btnCopyMd.classList.add('bg-emerald-500/10', 'border-emerald-500/25', 'text-emerald-400');
+        setTimeout(() => {
+          copyText.textContent = "Copy";
+          btnCopyMd.classList.remove('bg-emerald-500/10', 'border-emerald-500/25', 'text-emerald-400');
+        }, 2000);
+      });
+    });
+
+    // Run deconstruction
+    btnAnalyze.addEventListener('click', () => {
+      if (!selectedFile || analysisInProgress) return;
+      
+      analysisInProgress = true;
+      btnCancelFile.disabled = true;
+      btnAnalyze.disabled = true;
+      btnAnalyze.classList.add('opacity-50', 'cursor-not-allowed');
+      errorCard.classList.add('hidden');
+      
+      // Setup loading status
+      loaderCard.classList.remove('hidden');
+      loaderBar.style.width = '10%';
+      loaderPercent.textContent = 'Uploading...';
+      
+      let progress = 10;
+      const progressInterval = setInterval(() => {
+        if (progress < 90) {
+          progress += Math.floor(Math.random() * 5) + 1;
+          loaderBar.style.width = `${progress}%`;
+          
+          if (progress < 30) {
+            loaderPercent.textContent = 'Uploading file...';
+          } else if (progress < 50) {
+            loaderPercent.textContent = 'Sending to Gemini...';
+          } else if (progress < 75) {
+            loaderPercent.textContent = 'Deconstructing audio spectra...';
+          } else {
+            loaderPercent.textContent = 'Synthesizing Pigments preset...';
+          }
+        }
+      }, 500);
+
+      // Perform upload request
+      const formData = new FormData();
+      formData.append('audio', selectedFile);
+      formData.append('model', document.getElementById('model-select').value);
+
+      fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      })
+      .then(async (response) => {
+        clearInterval(progressInterval);
+        if (!response.ok) {
+          const errMsg = await response.text();
+          throw new Error(errMsg || 'Server returned an error');
+        }
+        return response.json();
+      })
+      .then((data) => {
+        loaderBar.style.width = '100%';
+        loaderPercent.textContent = '100%';
+        
+        setTimeout(() => {
+          loaderCard.classList.add('hidden');
+          displayResults(data);
+          analysisInProgress = false;
+          btnCancelFile.disabled = false;
+          btnAnalyze.disabled = false;
+          btnAnalyze.classList.remove('opacity-50', 'cursor-not-allowed');
+        }, 500);
+      })
+      .catch((err) => {
+        clearInterval(progressInterval);
+        loaderCard.classList.add('hidden');
+        showError(err.message);
+        
+        analysisInProgress = false;
+        btnCancelFile.disabled = false;
+        btnAnalyze.disabled = false;
+        btnAnalyze.classList.remove('opacity-50', 'cursor-not-allowed');
+      });
+    });
+
+    // ----------------------------------------------------
+    // Visual Canvas Plotters
+    // ----------------------------------------------------
+
+    // 1. Draw 3D Wavetable Canvas
+    function drawWavetable(waveformType, positionVal = 0.5) {
+      const ctx = wvtCanvas.getContext('2d');
+      const w = wvtCanvas.width = wvtCanvas.parentElement.clientWidth * 2;
+      const h = wvtCanvas.height = wvtCanvas.parentElement.clientHeight * 2;
+      ctx.clearRect(0, 0, w, h);
+      ctx.strokeStyle = '#22d3ee';
+      ctx.lineWidth = 2.5;
+
+      const lines = 7;
+      const stepY = (h - 40) / lines;
+      
+      for (let i = lines - 1; i >= 0; i--) {
+        const offsetRatio = i / (lines - 1);
+        // Fade lines in background
+        ctx.strokeStyle = `rgba(34, 211, 238, ${0.15 + (1.0 - offsetRatio) * 0.85})`;
+        ctx.lineWidth = 1.5 + (1.0 - offsetRatio) * 1.5;
+        
+        ctx.beginPath();
+        const startY = h - 20 - i * stepY;
+        const widthX = w - 40;
+        
+        // Morph wave function based on type and offset
+        for (let x = 0; x <= widthX; x++) {
+          const t = x / widthX;
+          const phase = t * Math.PI * 2;
+          
+          let y = 0;
+          if (waveformType === 'Sine') {
+            y = Math.sin(phase);
+          } else if (waveformType === 'Triangle') {
+            y = Math.abs((phase % (Math.PI * 2)) - Math.PI) / (Math.PI / 2) - 1.0;
+          } else if (waveformType === 'Square') {
+            y = Math.sin(phase) >= 0 ? 0.8 : -0.8;
+          } else { // Saw
+            y = ((phase % (Math.PI * 2)) / Math.PI) - 1.0;
+          }
+          
+          // Apply horizontal perspective skew
+          const skewX = 20 + x + i * 4;
+          const skewY = startY + y * 18 - i * 2;
+          
+          if (x === 0) {
+            ctx.moveTo(skewX, skewY);
+          } else {
+            ctx.lineTo(skewX, skewY);
+          }
+        }
+        ctx.stroke();
+      }
+
+      // Draw highlighted indicator for active position
+      const activeLineIndex = Math.floor(positionVal * (lines - 1));
+      ctx.strokeStyle = 'rgba(251, 146, 60, 0.9)'; // orange active line
+      ctx.lineWidth = 3.0;
+      ctx.shadowColor = 'rgba(251, 146, 60, 0.4)';
+      ctx.shadowBlur = 8;
+      
+      ctx.beginPath();
+      const startY = h - 20 - (lines - 1 - activeLineIndex) * stepY;
+      const widthX = w - 40;
+      for (let x = 0; x <= widthX; x++) {
+        const t = x / widthX;
+        const phase = t * Math.PI * 2;
+        let y = 0;
+        if (waveformType === 'Sine') {
+          y = Math.sin(phase);
+        } else if (waveformType === 'Triangle') {
+          y = Math.abs((phase % (Math.PI * 2)) - Math.PI) / (Math.PI / 2) - 1.0;
+        } else if (waveformType === 'Square') {
+          y = Math.sin(phase) >= 0 ? 0.8 : -0.8;
+        } else {
+          y = ((phase % (Math.PI * 2)) / Math.PI) - 1.0;
+        }
+        const skewX = 20 + x + (lines - 1 - activeLineIndex) * 4;
+        const skewY = startY + y * 18 - (lines - 1 - activeLineIndex) * 2;
+        
+        if (x === 0) ctx.moveTo(skewX, skewY);
+        else ctx.lineTo(skewX, skewY);
+      }
+      ctx.stroke();
+      
+      // Reset shadows
+      ctx.shadowBlur = 0;
+    }
+
+    // 2. Draw Filter Frequency Response
+    function drawFilterCurve(cutoff = 0.5, resonance = 0.2) {
+      const ctx = filterCanvas.getContext('2d');
+      const w = filterCanvas.width = filterCanvas.parentElement.clientWidth * 2;
+      const h = filterCanvas.height = filterCanvas.parentElement.clientHeight * 2;
+      ctx.clearRect(0, 0, w, h);
+      ctx.strokeStyle = '#fb923c'; // Orange Filter curve
+      ctx.lineWidth = 3;
+      
+      // Background grids
+      ctx.strokeStyle = 'rgba(255,255,255,0.02)';
+      ctx.lineWidth = 1;
+      for (let grid = 1; grid <= 4; grid++) {
+        const x = (w / 5) * grid;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = '#fb923c';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      
+      const cornerX = 40 + cutoff * (w - 80);
+      const resPeakHeight = resonance * 45;
+      
+      for (let x = 0; x <= w; x++) {
+        let y = h - 30; // base line
+        
+        // Lowpass filter frequency response approximation
+        if (x < cornerX) {
+          // Pre-corner: resonance peak bumps the response before the roll-off
+          const distance = (cornerX - x) / cornerX;
+          const peakBump = Math.exp(-Math.pow(distance * 6, 2)) * resPeakHeight;
+          y = (h / 2) - peakBump;
+        } else {
+          // Post-corner: steep roll-off slope + resonance peak spillover
+          const distance = (x - cornerX) / (w - cornerX);
+          const peakBump = Math.exp(-Math.pow(distance * 6, 2)) * resPeakHeight;
+          const rollOff = (h / 2) + Math.pow(distance, 1.8) * (h / 2);
+          y = rollOff - peakBump;
+        }
+        
+        // Clamp to screen
+        y = Math.max(10, Math.min(h - 10, y));
+
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      
+      // Fill under curve
+      ctx.fillStyle = 'rgba(251, 146, 60, 0.05)';
+      ctx.lineTo(w, h);
+      ctx.lineTo(0, h);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // 3. Draw Envelope visual ADSR shape
+    function drawEnvelopeCurve(a = 0.1, d = 0.2, s = 0.7, r = 0.1) {
+      const ctx = envCanvas.getContext('2d');
+      const w = envCanvas.width = envCanvas.parentElement.clientWidth * 2;
+      const h = envCanvas.height = envCanvas.parentElement.clientHeight * 2;
+      ctx.clearRect(0, 0, w, h);
+      ctx.strokeStyle = '#4ade80'; // Green Env curve
+      ctx.lineWidth = 3;
+      
+      const margin = 20;
+      const graphW = w - margin * 2;
+      const graphH = h - margin * 2;
+      
+      // Normalize times so they sum to 100% of graph width
+      const totalWidth = a + d + 0.35 + r; // 0.35 is hardcoded sustain width
+      const scaleX = graphW / totalWidth;
+      
+      const ptAttackX = margin + (a * scaleX);
+      const ptAttackY = margin;
+      
+      const ptDecayX = ptAttackX + (d * scaleX);
+      const ptDecayY = margin + (graphH * (1.0 - s));
+      
+      const ptSustainX = ptDecayX + (0.35 * scaleX);
+      const ptSustainY = ptDecayY;
+      
+      const ptReleaseX = ptSustainX + (r * scaleX);
+      const ptReleaseY = margin + graphH;
+      
+      // Draw path
+      ctx.beginPath();
+      ctx.moveTo(margin, margin + graphH);
+      ctx.lineTo(ptAttackX, ptAttackY); // Attack phase
+      ctx.lineTo(ptDecayX, ptDecayY);   // Decay phase
+      ctx.lineTo(ptSustainX, ptSustainY); // Sustain phase
+      ctx.lineTo(ptReleaseX, ptReleaseY); // Release phase
+      ctx.stroke();
+      
+      // Fill under envelope
+      ctx.fillStyle = 'rgba(74, 222, 128, 0.05)';
+      ctx.lineTo(margin, margin + graphH);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Draw nodes
+      ctx.fillStyle = '#4ade80';
+      const nodes = [
+        [ptAttackX, ptAttackY],
+        [ptDecayX, ptDecayY],
+        [ptSustainX, ptSustainY],
+        [ptReleaseX, ptReleaseY]
+      ];
+      nodes.forEach(n => {
+        ctx.beginPath();
+        ctx.arc(n[0], n[1], 4.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    // 1b. Draw 3D Wavetable Canvas for Engine 2
+    function drawWavetable2(waveformType, positionVal = 0.5) {
+      const ctx = wvt2Canvas.getContext('2d');
+      const w = wvt2Canvas.width = wvt2Canvas.parentElement.clientWidth * 2;
+      const h = wvt2Canvas.height = wvt2Canvas.parentElement.clientHeight * 2;
+      ctx.clearRect(0, 0, w, h);
+      ctx.strokeStyle = '#c084fc';
+      ctx.lineWidth = 2.5;
+
+      const lines = 7;
+      const stepY = (h - 40) / lines;
+      
+      for (let i = lines - 1; i >= 0; i--) {
+        const offsetRatio = i / (lines - 1);
+        ctx.strokeStyle = `rgba(192, 132, 252, ${0.15 + (1.0 - offsetRatio) * 0.85})`;
+        ctx.lineWidth = 1.5 + (1.0 - offsetRatio) * 1.5;
+        
+        ctx.beginPath();
+        const startY = h - 20 - i * stepY;
+        const widthX = w - 40;
+        
+        for (let x = 0; x <= widthX; x++) {
+          const t = x / widthX;
+          const phase = t * Math.PI * 2;
+          
+          let y = 0;
+          if (waveformType === 'Sine') {
+            y = Math.sin(phase);
+          } else if (waveformType === 'Triangle') {
+            y = Math.abs((phase % (Math.PI * 2)) - Math.PI) / (Math.PI / 2) - 1.0;
+          } else if (waveformType === 'Square') {
+            y = Math.sin(phase) >= 0 ? 0.8 : -0.8;
+          } else {
+            y = ((phase % (Math.PI * 2)) / Math.PI) - 1.0;
+          }
+          
+          const skewX = 20 + x + i * 4;
+          const skewY = startY + y * 18 - i * 2;
+          
+          if (x === 0) {
+            ctx.moveTo(skewX, skewY);
+          } else {
+            ctx.lineTo(skewX, skewY);
+          }
+        }
+        ctx.stroke();
+      }
+
+      // Draw highlighted indicator for active position
+      const activeLineIndex = Math.floor(positionVal * (lines - 1));
+      ctx.strokeStyle = 'rgba(251, 146, 60, 0.9)'; // orange active line
+      ctx.lineWidth = 3.0;
+      ctx.shadowColor = 'rgba(251, 146, 60, 0.4)';
+      ctx.shadowBlur = 8;
+      
+      ctx.beginPath();
+      const startY = h - 20 - (lines - 1 - activeLineIndex) * stepY;
+      const widthX = w - 40;
+      for (let x = 0; x <= widthX; x++) {
+        const t = x / widthX;
+        const phase = t * Math.PI * 2;
+        let y = 0;
+        if (waveformType === 'Sine') {
+          y = Math.sin(phase);
+        } else if (waveformType === 'Triangle') {
+          y = Math.abs((phase % (Math.PI * 2)) - Math.PI) / (Math.PI / 2) - 1.0;
+        } else if (waveformType === 'Square') {
+          y = Math.sin(phase) >= 0 ? 0.8 : -0.8;
+        } else {
+          y = ((phase % (Math.PI * 2)) / Math.PI) - 1.0;
+        }
+        const skewX = 20 + x + (lines - 1 - activeLineIndex) * 4;
+        const skewY = startY + y * 18 - (lines - 1 - activeLineIndex) * 2;
+        
+        if (x === 0) ctx.moveTo(skewX, skewY);
+        else ctx.lineTo(skewX, skewY);
+      }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+
+    // 2b. Draw Filter 2 Frequency Response
+    function drawFilter2Curve(cutoff = 0.5, resonance = 0.2) {
+      const ctx = filter2Canvas.getContext('2d');
+      const w = filter2Canvas.width = filter2Canvas.parentElement.clientWidth * 2;
+      const h = filter2Canvas.height = filter2Canvas.parentElement.clientHeight * 2;
+      ctx.clearRect(0, 0, w, h);
+      ctx.strokeStyle = '#f43f5e'; // Pink Filter curve
+      ctx.lineWidth = 3;
+      
+      ctx.strokeStyle = 'rgba(255,255,255,0.02)';
+      ctx.lineWidth = 1;
+      for (let grid = 1; grid <= 4; grid++) {
+        const x = (w / 5) * grid;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = '#f43f5e';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      
+      const cornerX = 40 + cutoff * (w - 80);
+      const resPeakHeight = resonance * 45;
+      
+      for (let x = 0; x <= w; x++) {
+        let y = h - 30;
+        if (x < cornerX) {
+          const distance = (cornerX - x) / cornerX;
+          const peakBump = Math.exp(-Math.pow(distance * 6, 2)) * resPeakHeight;
+          y = (h / 2) - peakBump;
+        } else {
+          const distance = (x - cornerX) / (w - cornerX);
+          const peakBump = Math.exp(-Math.pow(distance * 6, 2)) * resPeakHeight;
+          const rollOff = (h / 2) + Math.pow(distance, 1.8) * (h / 2);
+          y = rollOff - peakBump;
+        }
+        y = Math.max(10, Math.min(h - 10, y));
+
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      
+      ctx.fillStyle = 'rgba(244, 63, 94, 0.05)';
+      ctx.lineTo(w, h);
+      ctx.lineTo(0, h);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // 3b. Draw Utility Engine Wave + Noise
+    function drawUtilityCurve(subVol = 0.0, noise1Vol = 0.0, noise2Vol = 0.0) {
+      const ctx = utilityCanvas.getContext('2d');
+      const w = utilityCanvas.width = utilityCanvas.parentElement.clientWidth * 2;
+      const h = utilityCanvas.height = utilityCanvas.parentElement.clientHeight * 2;
+      ctx.clearRect(0, 0, w, h);
+      
+      // Draw sub-oscillator sine wave if subVol > 0
+      if (subVol > 0.01) {
+        ctx.strokeStyle = `rgba(251, 191, 36, ${subVol})`;
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        for (let x = 0; x <= w; x++) {
+          const t = x / w;
+          const y = (h / 2) + Math.sin(t * Math.PI * 6) * (h / 3.5) * subVol;
+          if (x === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+      
+      // Draw noise particles overlay if noise volumes > 0
+      const totalNoise = parseFloat(noise1Vol) + parseFloat(noise2Vol);
+      if (totalNoise > 0.02) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${Math.min(0.3, totalNoise * 0.45)})`;
+        const particleCount = Math.floor(totalNoise * 180);
+        for (let i = 0; i < particleCount; i++) {
+          const px = Math.random() * w;
+          const py = Math.random() * h;
+          const size = Math.random() * 2 + 1;
+          ctx.fillRect(px, py, size, size);
+        }
+      }
+    }
+
+    // ----------------------------------------------------
+    // Rotary Knob Interactive Logic
+    // ----------------------------------------------------
+    function setupInteractiveKnob(knobId, arcId, indicatorId, valTextId, initialVal = 0.5, onUpdate = () => {}) {
+      const knob = document.getElementById(knobId);
+      const arc = document.getElementById(arcId);
+      const indicator = document.getElementById(indicatorId);
+      const valText = document.getElementById(valTextId);
+      
+      let val = initialVal;
+      updateKnobUI(val);
+      
+      let startY = 0;
+      let startVal = 0;
+      
+      function onMouseDown(e) {
+        startY = e.clientY || e.touches[0].clientY;
+        startVal = val;
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+        document.addEventListener('touchmove', onTouchMove, { passive: false });
+        document.addEventListener('touchend', onMouseUp);
+      }
+      
+      function onMouseMove(e) {
+        const clientY = e.clientY || (e.touches ? e.touches[0].clientY : 0);
+        const deltaY = startY - clientY;
+        // Sensitivity: 200px drag for full sweep (0.0 to 1.0)
+        let newVal = startVal + (deltaY / 200);
+        newVal = Math.max(0, Math.min(1, newVal));
+        val = newVal;
+        updateKnobUI(val);
+        onUpdate(val);
+      }
+      
+      function onTouchMove(e) {
+        e.preventDefault(); // stop scroll
+        onMouseMove(e);
+      }
+      
+      function onMouseUp() {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        document.removeEventListener('touchmove', onTouchMove);
+        document.removeEventListener('touchend', onMouseUp);
+      }
+      
+      function updateKnobUI(value) {
+        // Dashoffset: 0 to 270 degrees sweep. Max dasharray is 238.76 (circumference * 270/360)
+        // Actually, circle radius is 38. Circumference is 2 * Math.PI * 38 = 238.76.
+        // Dashoffset maps 0% to 238.76 (empty) and 100% to 0 (full circle).
+        // Since we rotate the arc from 135 deg to 405 deg, full sweep is 270 deg.
+        // Therefore, the max dasharray shown is 3/4 of circumference = 179.07
+        const maxSweep = 179.07;
+        const offset = maxSweep - (value * maxSweep);
+        arc.setAttribute('stroke-dashoffset', offset);
+        
+        // Indicator rotation angle: -135deg to +135deg
+        const angle = -135 + (value * 270);
+        indicator.setAttribute('transform', `rotate(${angle} 50 50)`);
+        
+        // Value text update
+        valText.textContent = `${(value * 100).toFixed(1)}%`;
+      }
+      
+      knob.addEventListener('mousedown', onMouseDown);
+      knob.addEventListener('touchstart', onMouseDown, { passive: true });
+      
+      return {
+        setValue: (v) => {
+          val = v;
+          updateKnobUI(v);
+        }
+      };
+    }
+
+    // Initialize the 4 interactive Macro knobs
+    const macroKnobs = [
+      setupInteractiveKnob('macro-knob-1', 'macro-arc-1', 'macro-indicator-1', 'macro-val-1', 0.5),
+      setupInteractiveKnob('macro-knob-2', 'macro-arc-2', 'macro-indicator-2', 'macro-val-2', 0.5),
+      setupInteractiveKnob('macro-knob-3', 'macro-arc-3', 'macro-indicator-3', 'macro-val-3', 0.5),
+      setupInteractiveKnob('macro-knob-4', 'macro-arc-4', 'macro-indicator-4', 'macro-val-4', 0.5)
+    ];
+
+    function displayResults(data) {
+      // 1. Map patch name and slider details
+      document.getElementById('val-patch-name').textContent = `Patch: ${data.patch_name}`;
+      
+      // Update values
+      valOscWaveform.textContent = data.osc1_waveform;
+      valFilterCutoff.textContent = data.filter1_cutoff.toFixed(3);
+      valFilterResonance.textContent = data.filter1_resonance.toFixed(3);
+      
+      valEnvAttack.textContent = data.env1_attack.toFixed(2);
+      valEnvDecay.textContent = data.env1_decay.toFixed(2);
+      valEnvSustain.textContent = data.env1_sustain.toFixed(2);
+      valEnvRelease.textContent = data.env1_release.toFixed(2);
+
+      // 2. Parse and assign Macro Modulation routings to Macro labels
+      // Reset macro labels
+      document.getElementById('macro-route-1').textContent = "Unassigned";
+      document.getElementById('macro-route-2').textContent = "Unassigned";
+      document.getElementById('macro-route-3').textContent = "Unassigned";
+      document.getElementById('macro-route-4').textContent = "Unassigned";
+      
+      macroKnobs[0].setValue(0.5);
+      macroKnobs[1].setValue(0.5);
+      macroKnobs[2].setValue(0.5);
+      macroKnobs[3].setValue(0.5);
+
+      if (data.additional_parameters && data.additional_parameters.length > 0) {
+        data.additional_parameters.forEach(param => {
+          const id = param.id.trim();
+          if (id.startsWith('Modulations_') && id.endsWith('_Amount')) {
+            // Format: Modulations_<Target>_<Source>_Amount
+            const parts = id.split('_');
+            if (parts.length >= 4) {
+              const targetName = parts[1];
+              const sourceName = parts[2];
+              const valFloat = parseFloat(param.value);
+              
+              if (sourceName.startsWith('Macro')) {
+                const macroNum = parseInt(sourceName.replace('Macro ', ''));
+                if (macroNum >= 1 && macroNum <= 4) {
+                  // Calculate percent change relative to 0.5 center
+                  const pct = Math.round((valFloat - 0.5) * 200);
+                  const sign = pct >= 0 ? '+' : '';
+                  const routeText = `${targetName} (${sign}${pct}%)`;
+                  
+                  // Display routing
+                  const labelEl = document.getElementById(`macro-route-${macroNum}`);
+                  if (labelEl.textContent === "Unassigned") {
+                    labelEl.textContent = routeText;
+                  } else {
+                    labelEl.textContent += `, ${routeText}`;
+                  }
+                  
+                  // Turn knob to represent modulation strength
+                  macroKnobs[macroNum-1].setValue(valFloat);
+                }
+              }
+            }
+          }
+        });
+      }
+
+      // 3. Populate additional parameters grid
+      const additionalSection = document.getElementById('additional-params-section');
+      const additionalTbody = document.getElementById('additional-params-tbody');
+      additionalTbody.innerHTML = '';
+      
+      if (data.additional_parameters && data.additional_parameters.length > 0) {
+        data.additional_parameters.forEach(param => {
+          const tr = document.createElement('tr');
+          tr.className = "hover:bg-white/5 transition-colors duration-150 border-b border-white/5";
+          
+          const tdId = document.createElement('td');
+          tdId.className = "py-2.5 font-mono text-cyan-400 font-semibold";
+          tdId.textContent = param.id;
+          
+          const tdValue = document.createElement('td');
+          tdValue.className = "py-2.5 font-mono text-right text-slate-200";
+          
+          const tdPercent = document.createElement('td');
+          tdPercent.className = "py-2.5 font-mono text-right text-slate-500";
+          
+          const valFloat = parseFloat(param.value);
+          if (!isNaN(valFloat) && valFloat >= 0 && valFloat <= 1 && param.value.includes('.')) {
+            tdValue.textContent = valFloat.toFixed(6);
+            tdPercent.textContent = `${(valFloat * 100).toFixed(1)}%`;
+          } else {
+            tdValue.textContent = param.value;
+            tdPercent.textContent = 'N/A';
+          }
+          
+          const tdDesc = document.createElement('td');
+          tdDesc.className = "py-2.5 pl-4 text-slate-400 max-w-[280px] truncate hover:whitespace-normal hover:overflow-visible hover:max-w-none";
+          tdDesc.textContent = param.description;
+          
+          tr.appendChild(tdId);
+          tr.appendChild(tdValue);
+          tr.appendChild(tdPercent);
+          tr.appendChild(tdDesc);
+          additionalTbody.appendChild(tr);
+        });
+        additionalSection.classList.remove('hidden');
+      } else {
+        additionalSection.classList.add('hidden');
+      }
+
+      // 4. Update Markdown Guide text block
+      markdownPre.textContent = data.markdown;
+      
+      // Set Download href targets
+      btnDownloadPgtx.href = `/api/download/${data.id}`;
+      btnDownloadMd.href = `/api/download-md/${data.id}`;
+      
+      // Toggle card states
+      emptyResultsCard.classList.add('hidden');
+      resultsCard.classList.remove('hidden');
+      setTabActive('params');
+
+      // 1. Process Engine 2 (Active check)
+      let hasEngine2 = false;
+      let engine2Type = 'Wavetable';
+      let engine2Vol = 0.0;
+      let engine2WvtPos = 0.5;
+      
+      // 2. Process Filter 2
+      let hasFilter2 = false;
+      let filter2Cutoff = 0.0;
+      let filter2Resonance = 0.0;
+      
+      // 3. Process Utility
+      let hasUtility = false;
+      let utilitySubVol = 0.0;
+      let utilityNoise1Vol = 0.0;
+      let utilityNoise2Vol = 0.0;
+
+      // Find Wavetable frame index for Engine 1
+      let wvtPosFloat = 0.5;
+
+      if (data.additional_parameters) {
+        data.additional_parameters.forEach(param => {
+          const valFloat = parseFloat(param.value);
+          
+          if (param.id === 'Engine2_Type') {
+            hasEngine2 = true;
+            engine2Type = param.value;
+          }
+          if (param.id === 'Engine2_Volume' || param.id === 'FilterMix_Engine2Volume') {
+            if (!isNaN(valFloat)) {
+              engine2Vol = valFloat;
+              if (valFloat > 0.05) hasEngine2 = true;
+            }
+          }
+          if (param.id === 'Engine2_Wvt_Waveform' || param.id === 'Engine2_WTOsc_FrameIndex') {
+            if (!isNaN(valFloat)) engine2WvtPos = valFloat;
+          }
+          
+          if (param.id === 'Filter2_Cutoff') {
+            hasFilter2 = true;
+            if (!isNaN(valFloat)) filter2Cutoff = valFloat;
+          }
+          if (param.id === 'Filter2_Resonance') {
+            hasFilter2 = true;
+            if (!isNaN(valFloat)) filter2Resonance = valFloat;
+          }
+          
+          if (param.id === 'Utility_Volume') {
+            if (!isNaN(valFloat) && valFloat > 0.02) {
+              hasUtility = true;
+              utilitySubVol = valFloat;
+            }
+          }
+          if (param.id === 'Utility_Noise1_Volume') {
+            if (!isNaN(valFloat) && valFloat > 0.02) {
+              hasUtility = true;
+              utilityNoise1Vol = valFloat;
+            }
+          }
+          if (param.id === 'Utility_Noise2_Volume') {
+            if (!isNaN(valFloat) && valFloat > 0.02) {
+              hasUtility = true;
+              utilityNoise2Vol = valFloat;
+            }
+          }
+
+          if (param.id === 'Engine1_Wvt_Waveform' || param.id === 'Engine1_WTOsc_FrameIndex') {
+            if (!isNaN(valFloat)) {
+              wvtPosFloat = valFloat;
+            }
+          }
+        });
+      }
+
+      // Update Engine 2 UI & toggle active class
+      const engine2Box = document.getElementById('engine2-box');
+      if (hasEngine2) {
+        document.getElementById('val-osc2-waveform').textContent = engine2Type;
+        document.getElementById('val-osc2-volume').textContent = `${(engine2Vol * 100).toFixed(0)}%`;
+        engine2Box.classList.add('active');
+      } else {
+        engine2Box.classList.remove('active');
+      }
+
+      // Update Filter 2 UI & toggle active class
+      const filter2Box = document.getElementById('filter2-box');
+      if (hasFilter2) {
+        document.getElementById('val-filter2-cutoff').textContent = filter2Cutoff.toFixed(3);
+        document.getElementById('val-filter2-resonance').textContent = filter2Resonance.toFixed(3);
+        filter2Box.classList.add('active');
+      } else {
+        filter2Box.classList.remove('active');
+      }
+
+      // Update Utility UI & toggle active class
+      const utilityBox = document.getElementById('utility-box');
+      if (hasUtility) {
+        document.getElementById('val-utility-subvol').textContent = `${(utilitySubVol * 100).toFixed(0)}%`;
+        document.getElementById('val-utility-noise1').textContent = `${(utilityNoise1Vol * 100).toFixed(0)}%`;
+        document.getElementById('val-utility-noise2').textContent = `${(utilityNoise2Vol * 100).toFixed(0)}%`;
+        utilityBox.classList.add('active');
+      } else {
+        utilityBox.classList.remove('active');
+      }
+
+      document.getElementById('val-wvt-pos').textContent = `${(wvtPosFloat * 100).toFixed(1)}%`;
+
+      // Function to draw all visualizer canvases
+      function drawAllVisualizers() {
+        drawWavetable(data.osc1_waveform, wvtPosFloat);
+        drawFilterCurve(data.filter1_cutoff, data.filter1_resonance);
+        drawEnvelopeCurve(data.env1_attack, data.env1_decay, data.env1_sustain, data.env1_release);
+        
+        if (hasEngine2) {
+          drawWavetable2(engine2Type, engine2WvtPos);
+        }
+        if (hasFilter2) {
+          drawFilter2Curve(filter2Cutoff, filter2Resonance);
+        }
+        if (hasUtility) {
+          drawUtilityCurve(utilitySubVol, utilityNoise1Vol, utilityNoise2Vol);
+        }
+      }
+
+      // Draw immediately, then trigger redraw intervals to sync with elastic CSS width transition
+      drawAllVisualizers();
+      setTimeout(drawAllVisualizers, 100);
+      setTimeout(drawAllVisualizers, 300);
+      setTimeout(drawAllVisualizers, 600);
+    }
+
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorCard.classList.remove('hidden');
+    }
+
+    function formatBytes(bytes, decimals = 1) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const dm = decimals < 0 ? 0 : decimals;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    }
+  </script>
+</body>
+</html>
