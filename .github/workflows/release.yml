@@ -1,0 +1,58 @@
+name: Release Go Binaries
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+          cache: true
+
+      - name: Create Build Outputs Directory
+        run: mkdir -p dist
+
+      - name: Build Binaries
+        env:
+          CGO_ENABLED: 0
+        run: |
+          # 1. macOS AMD64
+          GOOS=darwin GOARCH=amd64 go build -o dist/pigment-patch-generator-darwin-amd64 main.go
+          zip -j dist/pigment-patch-generator-darwin-amd64.zip dist/pigment-patch-generator-darwin-amd64 README.md LICENSE* 2>/dev/null || zip -j dist/pigment-patch-generator-darwin-amd64.zip dist/pigment-patch-generator-darwin-amd64 README.md
+
+          # 2. macOS ARM64 (Apple Silicon)
+          GOOS=darwin GOARCH=arm64 go build -o dist/pigment-patch-generator-darwin-arm64 main.go
+          zip -j dist/pigment-patch-generator-darwin-arm64.zip dist/pigment-patch-generator-darwin-arm64 README.md LICENSE* 2>/dev/null || zip -j dist/pigment-patch-generator-darwin-arm64.zip dist/pigment-patch-generator-darwin-arm64 README.md
+
+          # 3. Linux AMD64
+          GOOS=linux GOARCH=amd64 go build -o dist/pigment-patch-generator-linux-amd64 main.go
+          tar -czf dist/pigment-patch-generator-linux-amd64.tar.gz -C dist pigment-patch-generator-linux-amd64 -C .. README.md
+
+          # 4. Windows AMD64
+          GOOS=windows GOARCH=amd64 go build -o dist/pigment-patch-generator-windows-amd64.exe main.go
+          zip -j dist/pigment-patch-generator-windows-amd64.zip dist/pigment-patch-generator-windows-amd64.exe README.md LICENSE* 2>/dev/null || zip -j dist/pigment-patch-generator-windows-amd64.zip dist/pigment-patch-generator-windows-amd64.exe README.md
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/pigment-patch-generator-darwin-amd64.zip
+            dist/pigment-patch-generator-darwin-arm64.zip
+            dist/pigment-patch-generator-linux-amd64.tar.gz
+            dist/pigment-patch-generator-windows-amd64.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: true
